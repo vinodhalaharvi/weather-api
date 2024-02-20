@@ -1,4 +1,4 @@
-package main
+package v2_5
 
 import (
 	"net/http"
@@ -25,8 +25,8 @@ func TestWeatherEndpoint(t *testing.T) {
 	// Set up Gin and the route
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	owc := OpenWeatherClient{APIKey: "test_api_key"}
-	router.GET("/weather", WeatherRoute(owc))
+	owc := OpenWeatherClient25{}
+	router.GET("/weather", Route(&owc))
 
 	// Perform a GET request with that router
 	w := httptest.NewRecorder()

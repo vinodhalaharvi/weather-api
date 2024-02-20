@@ -1,0 +1,63 @@
+version: '3'
+
+services:
+  traefik:
+    image: traefik:v2.4
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./traefik.yml:/etc/traefik/traefik.yml"
+      - "./certs:/certs"  # Ensure this path matches where your cert files are located
+    labels:
+      - "traefik.enable=true"
+
+  gin-app:
+    build: .
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gin-app.rule=Host(`gin-app.local`)"
+      - "traefik.http.routers.gin-app.entrypoints=websecure"
+      - "traefik.http.routers.gin-app.tls=true"
+      - "traefik.http.services.gin-app.loadbalancer.server.port=8080"
+      - "traefik.http.routers.gin-app.middlewares=ratelimit"
+      # Rate limiting middleware
+      - "traefik.http.middlewares.ratelimit.rateLimit.average=200"
+      - "traefik.http.middlewares.ratelimit.rateLimit.period=1m"
+      - "traefik.http.middlewares.ratelimit.rateLimit.burst=1"
+      # Redirect to HTTPS middleware
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+
+
+  prometheus:
+    image: prom/prometheus:v2.26.0
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - traefik
+
+  grafana:
+    image: grafana/grafana:7.5.4
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  alertmanager:
+    image: prom/alertmanager:v0.21.0
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"

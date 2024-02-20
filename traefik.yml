@@ -1,0 +1,33 @@
+## Traefik Global Configuration
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+## Define the entrypoints
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+    http:
+      tls: { }  # No need for certResolver here
+
+## Enable Docker Provider
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    watch: true
+
+## TLS Configuration - Directly specify the paths to your certificates
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: "/certs/gin-app.local.crt"
+        keyFile: "/certs/gin-app.local.key"
+
+## Enable Traefik Dashboard
+api:
+  insecure: true
+  dashboard: true
